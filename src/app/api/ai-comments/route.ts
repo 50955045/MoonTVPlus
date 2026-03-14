@@ -91,11 +91,7 @@ export async function GET(request: NextRequest) {
       generatedAt: new Date().toISOString(),
     };
 
-    return NextResponse.json(response, {
-      headers: {
-        'Cache-Control': 'public, max-age=3600, s-maxage=3600', // 缓存1小时
-      },
-    });
+    return NextResponse.json(response);
   } catch (error) {
     console.error('AI评论生成失败:', error);
 

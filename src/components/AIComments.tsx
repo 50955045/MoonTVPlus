@@ -33,13 +33,16 @@ export default function AIComments({ movieName, movieInfo }: AICommentsProps) {
       const params = new URLSearchParams({
         name: movieName,
         count: '10',
+        _t: Date.now().toString(), // 添加时间戳防止缓存
       });
 
       if (movieInfo) {
         params.append('info', movieInfo);
       }
 
-      const response = await fetch(`/api/ai-comments?${params.toString()}`);
+      const response = await fetch(`/api/ai-comments?${params.toString()}`, {
+        cache: 'no-store', // 禁用缓存
+      });
 
       if (!response.ok) {
         const data = await response.json();
