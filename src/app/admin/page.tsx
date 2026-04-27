@@ -3714,6 +3714,10 @@ const NetDiskConfigComponent = ({
   const [pan123Enabled, setPan123Enabled] = useState(false);
   const [pan123Account, setPan123Account] = useState('');
   const [pan123Password, setPan123Password] = useState('');
+  const [ucEnabled, setUcEnabled] = useState(false);
+  const [ucCookie, setUcCookie] = useState('');
+  const [ucToken, setUcToken] = useState('');
+  const [ucSavePath, setUcSavePath] = useState('/');
 
   useEffect(() => {
     const quark = config?.NetDiskConfig?.Quark;
@@ -3731,6 +3735,10 @@ const NetDiskConfigComponent = ({
     setPan123Enabled(config?.NetDiskConfig?.Pan123?.Enabled || false);
     setPan123Account(config?.NetDiskConfig?.Pan123?.Account || '');
     setPan123Password(config?.NetDiskConfig?.Pan123?.Password || '');
+    setUcEnabled(config?.NetDiskConfig?.UC?.Enabled || false);
+    setUcCookie(config?.NetDiskConfig?.UC?.Cookie || '');
+    setUcToken(config?.NetDiskConfig?.UC?.Token || '');
+    setUcSavePath(config?.NetDiskConfig?.UC?.SavePath || '/');
   }, [config]);
 
   const handleSave = async () => {
@@ -3762,6 +3770,12 @@ const NetDiskConfigComponent = ({
             Enabled: pan123Enabled,
             Account: pan123Account,
             Password: pan123Password,
+          },
+          UC: {
+            Enabled: ucEnabled,
+            Cookie: ucCookie,
+            Token: ucToken,
+            SavePath: ucSavePath,
           },
         }),
       });
@@ -3911,6 +3925,36 @@ const NetDiskConfigComponent = ({
         }
 
         showSuccess(data.message || '123网盘账号密码可用', showAlert);
+      } catch (error) {
+        showError(error instanceof Error ? error.message : '校验失败', showAlert);
+        throw error;
+      }
+    });
+  };
+
+  const handleValidateUC = async () => {
+    await withLoading('validateUCNetDisk', async () => {
+      try {
+        const response = await fetch('/api/admin/netdisk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'validate',
+            provider: 'uc',
+            UC: {
+              Cookie: ucCookie,
+              Token: ucToken,
+              SavePath: ucSavePath,
+            },
+          }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || '校验失败');
+        }
+
+        showSuccess(data.message || 'UC Cookie 可读', showAlert);
       } catch (error) {
         showError(error instanceof Error ? error.message : '校验失败', showAlert);
         throw error;
@@ -4244,6 +4288,92 @@ const NetDiskConfigComponent = ({
               className={buttonStyles.primary}
             >
               {isLoading('validatePan123NetDisk') ? '校验中...' : '校验123网盘账号密码'}
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={isLoading('saveNetDisk')}
+              className={buttonStyles.success}
+            >
+              {isLoading('saveNetDisk') ? '保存中...' : '保存配置'}
+            </button>
+          </div>
+        </div>
+      </details>
+
+      <details className='pt-4 border-t border-gray-200 dark:border-gray-700'>
+        <summary className='text-sm font-semibold text-gray-900 dark:text-gray-100 cursor-pointer'>
+          UC网盘
+        </summary>
+        <div className='mt-4 space-y-4'>
+          <div className='flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700'>
+            <div>
+              <h3 className='text-sm font-medium text-gray-900 dark:text-gray-100'>
+                启用UC网盘
+              </h3>
+              <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
+                开启后，网盘搜索中的UC网盘资源会显示“立即播放”按钮
+              </p>
+            </div>
+            <label className='relative inline-flex items-center cursor-pointer'>
+              <input
+                type='checkbox'
+                checked={ucEnabled}
+                onChange={(e) => setUcEnabled(e.target.checked)}
+                className='sr-only peer'
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
+            </label>
+          </div>
+
+          <div>
+            <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+              Cookie
+            </label>
+            <textarea
+              value={ucCookie}
+              onChange={(e) => setUcCookie(e.target.value)}
+              disabled={!ucEnabled}
+              rows={5}
+              placeholder='粘贴 UC 网盘 Cookie'
+              className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed'
+            />
+          </div>
+
+          <div>
+            <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+              Open API Token（可选）
+            </label>
+            <input
+              type='text'
+              value={ucToken}
+              onChange={(e) => setUcToken(e.target.value)}
+              disabled={!ucEnabled}
+              placeholder='可选，填写后优先尝试原画地址'
+              className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed'
+            />
+          </div>
+
+          <div>
+            <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+              临时转存位置
+            </label>
+            <input
+              type='text'
+              value={ucSavePath}
+              onChange={(e) => setUcSavePath(e.target.value)}
+              disabled={!ucEnabled}
+              placeholder='/影视/UC临时转存'
+              className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed'
+            />
+          </div>
+
+          <div className='flex gap-3'>
+            <button
+              onClick={handleValidateUC}
+              disabled={!ucEnabled || !ucCookie || isLoading('validateUCNetDisk')}
+              className={buttonStyles.primary}
+            >
+              {isLoading('validateUCNetDisk') ? '校验中...' : '校验UC配置'}
             </button>
             <button
               onClick={handleSave}

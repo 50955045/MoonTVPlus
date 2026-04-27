@@ -2506,6 +2506,7 @@ function PlayPageClient() {
       newUrl.startsWith('/api/openlist/play') ||
       newUrl.startsWith('/api/netdisk/123/play') ||
       newUrl.startsWith('/api/netdisk/quark/play') ||
+      newUrl.startsWith('/api/netdisk/uc/play') ||
       newUrl.startsWith('/api/netdisk/baidu/play') ||
       newUrl.startsWith('/api/source-script/play');
 

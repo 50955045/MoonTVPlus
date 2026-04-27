@@ -19,11 +19,27 @@ import {
   refreshMobileNetdiskSession,
 } from '@/lib/netdisk/mobile-session-cache';
 import {
+  createPan123NetdiskSession,
+  getPan123NetdiskSession,
+  parsePan123NetdiskId,
+  refreshPan123NetdiskSession,
+} from '@/lib/netdisk/pan123-session-cache';
+import {
   createQuarkNetdiskSession,
   getQuarkNetdiskSession,
   parseQuarkNetdiskId,
   refreshQuarkNetdiskSession,
 } from '@/lib/netdisk/quark-session-cache';
+import {
+  LEGACY_QUARK_TEMP_SOURCE,
+  NETDISK_123_SOURCE,
+  NETDISK_BAIDU_SOURCE,
+  NETDISK_MOBILE_SOURCE,
+  NETDISK_QUARK_SOURCE,
+  NETDISK_TIANYI_SOURCE,
+  NETDISK_UC_SOURCE,
+  normalizeNetdiskSource,
+} from '@/lib/netdisk/source';
 import {
   createTianyiNetdiskSession,
   getTianyiNetdiskSession,
@@ -31,12 +47,11 @@ import {
   refreshTianyiNetdiskSession,
 } from '@/lib/netdisk/tianyi-session-cache';
 import {
-  createPan123NetdiskSession,
-  getPan123NetdiskSession,
-  parsePan123NetdiskId,
-  refreshPan123NetdiskSession,
-} from '@/lib/netdisk/pan123-session-cache';
-import { LEGACY_QUARK_TEMP_SOURCE, NETDISK_123_SOURCE, NETDISK_BAIDU_SOURCE, NETDISK_MOBILE_SOURCE, NETDISK_QUARK_SOURCE, NETDISK_TIANYI_SOURCE, normalizeNetdiskSource } from '@/lib/netdisk/source';
+  createUCNetdiskSession,
+  getUCNetdiskSession,
+  parseUCNetdiskId,
+  refreshUCNetdiskSession,
+} from '@/lib/netdisk/uc-session-cache';
 import {
   executeSavedSourceScript,
   normalizeScriptDetailResult,
@@ -673,6 +688,76 @@ export async function GET(request: NextRequest) {
         desc: `夸克网盘分享：${quarkSession.shareUrl}`,
         episodes: episodes.map((ep) => (
           `/api/netdisk/quark/play?id=${encodeURIComponent(quarkSession.id)}&episodeIndex=${ep.originalIndex}`
+        )),
+        episodes_titles: episodes.map((ep) => ep.title),
+        proxyMode: false,
+      });
+    } catch (error) {
+      return NextResponse.json(
+        { error: (error as Error).message },
+        { status: 500 }
+      );
+    }
+  }
+
+  if (sourceCode === NETDISK_UC_SOURCE) {
+    try {
+      const config = await getConfig();
+      const ucConfig = config.NetDiskConfig?.UC;
+      if (!ucConfig?.Enabled || !ucConfig.Cookie) {
+        throw new Error('UC网盘未配置或未启用');
+      }
+      const { parseVideoFileName } = await import('@/lib/video-parser');
+
+      let session = refreshUCNetdiskSession(id) || getUCNetdiskSession(id);
+      if (!session) {
+        const payload = parseUCNetdiskId(id);
+        const { listUCShareVideos } = await import('@/lib/netdisk/uc.client');
+        const result = await listUCShareVideos(payload.shareUrl, ucConfig.Cookie, payload.passcode || '');
+        session = createUCNetdiskSession({
+          title: title || result.title,
+          shareUrl: payload.shareUrl,
+          passcode: payload.passcode,
+          shareId: result.shareId,
+          shareToken: result.shareToken,
+          files: result.files,
+        });
+      }
+      if (!session) {
+        throw new Error('UC网盘播放信息恢复失败');
+      }
+
+      const ucSession = session;
+      const episodes = ucSession.files
+        .map((file, index) => {
+          const parsed = parseVideoFileName(file.name);
+          return {
+            originalIndex: index,
+            fileName: file.name,
+            episode: parsed.episode || index + 1,
+            title: formatNetdiskEpisodeTitle(parsed, file.name),
+            isOVA: parsed.isOVA,
+          };
+        })
+        .sort((a, b) => {
+          if (a.isOVA && !b.isOVA) return 1;
+          if (!a.isOVA && b.isOVA) return -1;
+          return a.episode !== b.episode
+            ? a.episode - b.episode
+            : a.fileName.localeCompare(b.fileName);
+        });
+
+      return NextResponse.json({
+        source: NETDISK_UC_SOURCE,
+        source_name: 'UC网盘',
+        id: ucSession.id,
+        title: title || ucSession.title,
+        poster: '',
+        year: '',
+        douban_id: 0,
+        desc: `UC网盘分享：${ucSession.shareUrl}`,
+        episodes: episodes.map((ep) => (
+          `/api/netdisk/uc/play?id=${encodeURIComponent(ucSession.id)}&episodeIndex=${ep.originalIndex}`
         )),
         episodes_titles: episodes.map((ep) => ep.title),
         proxyMode: false,

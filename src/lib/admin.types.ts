@@ -170,6 +170,12 @@ export interface AdminConfig {
       Account: string;
       Password: string;
     };
+    UC?: {
+      Enabled: boolean;
+      Cookie: string;
+      Token?: string;
+      SavePath: string;
+    };
   };
   AIConfig?: {
     Enabled: boolean; // 是否启用AI问片功能

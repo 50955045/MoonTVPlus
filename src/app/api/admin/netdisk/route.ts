@@ -21,6 +21,11 @@ import {
   validateQuarkCookieReadable,
 } from '@/lib/netdisk/quark.client';
 import { normalizeTianyiAccount, normalizeTianyiPassword, validateTianyiCredentials } from '@/lib/netdisk/tianyi.client';
+import {
+  assertUCCookieHeaderSafe,
+  normalizeUCCookie,
+  validateUCCookieReadable,
+} from '@/lib/netdisk/uc.client';
 
 export const runtime = 'nodejs';
 
@@ -51,7 +56,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { action, Quark, Mobile, Baidu, Tianyi, Pan123, provider } = body;
+    const { action, Quark, Mobile, Baidu, Tianyi, Pan123, UC, provider } = body;
     const adminConfig = await getConfig();
 
     if (action === 'save') {
@@ -64,6 +69,8 @@ export async function POST(request: NextRequest) {
       const normalizedTianyiPassword = Tianyi?.Password ? normalizeTianyiPassword(Tianyi.Password) : '';
       const normalizedPan123Account = Pan123?.Account ? normalizePan123Account(Pan123.Account) : '';
       const normalizedPan123Password = Pan123?.Password ? normalizePan123Password(Pan123.Password) : '';
+      const normalizedUCCookie = UC?.Cookie ? assertUCCookieHeaderSafe(UC.Cookie) : '';
+      const normalizedUCToken = UC?.Token ? String(UC.Token).trim() : '';
 
       adminConfig.NetDiskConfig = adminConfig.NetDiskConfig || {};
       adminConfig.NetDiskConfig.Quark = {
@@ -88,6 +95,12 @@ export async function POST(request: NextRequest) {
         Enabled: Boolean(Pan123?.Enabled),
         Account: normalizedPan123Account,
         Password: normalizedPan123Password,
+      };
+      adminConfig.NetDiskConfig.UC = {
+        Enabled: Boolean(UC?.Enabled),
+        Cookie: normalizedUCCookie,
+        Token: normalizedUCToken,
+        SavePath: UC?.SavePath || '/',
       };
 
       await db.saveAdminConfig(adminConfig);
@@ -142,6 +155,16 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           success: true,
           message: '123网盘账号密码可用',
+        });
+      }
+      if (provider === 'uc') {
+        if (!UC?.Cookie) {
+          return NextResponse.json({ error: '请先填写UC Cookie' }, { status: 400 });
+        }
+        await validateUCCookieReadable(normalizeUCCookie(UC.Cookie));
+        return NextResponse.json({
+          success: true,
+          message: 'UC Cookie 可读',
         });
       }
 

@@ -688,6 +688,12 @@ export function configSelfCheck(adminConfig: AdminConfig): AdminConfig {
         Account: '',
         Password: '',
       },
+      UC: {
+        Enabled: false,
+        Cookie: '',
+        Token: '',
+        SavePath: '/',
+      },
     };
   }
 
@@ -726,6 +732,15 @@ export function configSelfCheck(adminConfig: AdminConfig): AdminConfig {
       Enabled: false,
       Account: '',
       Password: '',
+    };
+  }
+
+  if (!adminConfig.NetDiskConfig.UC) {
+    adminConfig.NetDiskConfig.UC = {
+      Enabled: false,
+      Cookie: '',
+      Token: '',
+      SavePath: '/',
     };
   }
 

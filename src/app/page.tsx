@@ -4,7 +4,6 @@
 
 import { BookOpen, Bot, ChevronRight, Link as LinkIcon, ListVideo, Music } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 
 import {
@@ -47,8 +46,6 @@ function HomeClient() {
   >([]);
   const [loading, setLoading] = useState(true);
   const { announcement } = useSite();
-  const router = useRouter();
-
   // 首页模块配置状态
   const [homeModules, setHomeModules] = useState<HomeModule[]>([
     { id: 'hotMovies', name: '热门电影', enabled: true, order: 0 },
@@ -75,7 +72,7 @@ function HomeClient() {
   const [toast, setToast] = useState<ToastProps | null>(null);
 
   const detectNetdiskLink = (url: string): {
-    provider: 'quark' | 'mobile' | 'baidu' | 'tianyi' | '123';
+    provider: 'quark' | 'mobile' | 'baidu' | 'tianyi' | '123' | 'uc';
     shareUrl: string;
     passcode?: string;
   } | null => {
@@ -134,6 +131,17 @@ function HomeClient() {
       };
     }
 
+    if (/https:\/\/drive\.uc\.cn\/s\//i.test(trimmed)) {
+      return {
+        provider: 'uc',
+        shareUrl: trimmed,
+        passcode: pickPasscode(
+          trimmed.match(/[?&](?:pwd|passcode)=([^&]+)/i)?.[1],
+          inlinePasscode(trimmed)
+        ),
+      };
+    }
+
     if (/https:\/\/(?:yun|caiyun)\.139\.com\//i.test(trimmed)) {
       return { provider: 'mobile', shareUrl: trimmed };
     }
@@ -157,9 +165,11 @@ function HomeClient() {
           netdisk.provider === 'mobile'
             ? 'netdisk-mobile'
             : netdisk.provider === 'baidu'
-              ? 'netdisk-baidu'
+                ? 'netdisk-baidu'
               : netdisk.provider === 'tianyi'
                 ? 'netdisk-tianyi'
+                : netdisk.provider === 'uc'
+                  ? 'netdisk-uc'
                 : netdisk.provider === '123'
                   ? 'netdisk-123'
                   : 'netdisk-quark';
@@ -848,6 +858,9 @@ function HomeClient() {
             <div className='p-4 space-y-4'>
               <div className='text-sm text-gray-600 dark:text-gray-300'>
                 请输入可直接播放的视频链接。
+              </div>
+              <div className='text-xs text-gray-500 dark:text-gray-400'>
+                支持夸克、UC、百度、天翼、移动、123 网盘在线播放。
               </div>
               <input
                 value={directPlayUrl}

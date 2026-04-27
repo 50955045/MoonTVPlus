@@ -170,6 +170,8 @@ export default function PansouSearch({
             ? '/api/netdisk/baidu/instant-play'
             : cloudType === 'tianyi'
               ? '/api/netdisk/tianyi/instant-play'
+              : cloudType === 'uc'
+                ? '/api/netdisk/uc/instant-play'
               : cloudType === '123'
                 ? '/api/netdisk/123/instant-play'
               : '/api/netdisk/quark/instant-play';
@@ -181,7 +183,7 @@ export default function PansouSearch({
         body: JSON.stringify({
           shareUrl: link.url,
           passcode: link.password || '',
-          title: link.note || keyword,
+          title: keyword,
         }),
       });
 
@@ -191,7 +193,7 @@ export default function PansouSearch({
       }
 
       router.push(
-        `/play?source=${encodeURIComponent(data.source || (cloudType === 'mobile' ? 'netdisk-mobile' : cloudType === 'baidu' ? 'netdisk-baidu' : cloudType === 'tianyi' ? 'netdisk-tianyi' : cloudType === '123' ? 'netdisk-123' : 'netdisk-quark'))}&id=${encodeURIComponent(data.id)}&title=${encodeURIComponent(data.title || keyword)}`
+        `/play?source=${encodeURIComponent(data.source || (cloudType === 'mobile' ? 'netdisk-mobile' : cloudType === 'baidu' ? 'netdisk-baidu' : cloudType === 'tianyi' ? 'netdisk-tianyi' : cloudType === 'uc' ? 'netdisk-uc' : cloudType === '123' ? 'netdisk-123' : 'netdisk-quark'))}&id=${encodeURIComponent(data.id)}&title=${encodeURIComponent(keyword)}`
       );
     } catch (err: any) {
       setToast({
@@ -349,7 +351,7 @@ export default function PansouSearch({
 
                       {/* 操作按钮 */}
                       <div className='flex items-center gap-1 flex-shrink-0'>
-                        {(cloudType === 'quark' || cloudType === 'mobile' || cloudType === 'baidu' || cloudType === 'tianyi' || cloudType === '123') && (
+                        {(cloudType === 'quark' || cloudType === 'mobile' || cloudType === 'baidu' || cloudType === 'tianyi' || cloudType === '123' || cloudType === 'uc') && (
                           <>
                             <button
                               onClick={() => handleNetdiskInstantPlay(cloudType, link)}
