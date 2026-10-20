@@ -429,6 +429,12 @@ export default function MusicClient({ children: _children }: { children?: React.
   );
   const [showQualityMenu, setShowQualityMenu] = useState(false); // 音质选择菜单
   const [showAudioEffectsMenu, setShowAudioEffectsMenu] = useState(false);
+  // 音效引擎总开关：默认关闭 → audio 标签直出，切后台可继续播放
+  // 开启后才接 EQ/混响/真频谱链，但手机切后台会被系统掐声；切换后刷新页面生效
+  const [audioFxEngineEnabled, setAudioFxEngineEnabled] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    try { return window.localStorage.getItem('moontv_music_fx_engine') === '1'; } catch { return false; }
+  });
   const [equalizerEnabled, setEqualizerEnabled] = useState(false);
   const [eqGains, setEqGains] = useState<number[]>(DEFAULT_EQ_GAINS);
   const [loudnessEnabled, setLoudnessEnabled] = useState(false);
@@ -2220,7 +2226,9 @@ export default function MusicClient({ children: _children }: { children?: React.
       spectrumFrameRef.current = window.requestAnimationFrame(tick);
     };
 
-    void ensureAnalyser();
+    if (audioFxEngineEnabled) {
+      void ensureAnalyser();
+    }
     spectrumFrameRef.current = window.requestAnimationFrame(tick);
 
     return () => {
@@ -3282,7 +3290,9 @@ export default function MusicClient({ children: _children }: { children?: React.
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onClick={() => setShowAudioEffectsMenu(false)}>
           <div className="relative w-full max-w-5xl max-h-[90vh] bg-zinc-900 rounded-2xl border border-white/10 shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="p-5 border-b border-white/10 flex items-center justify-between"><div><h3 className="text-lg font-bold text-white">均衡器与音效调节</h3></div><button onClick={() => setShowAudioEffectsMenu(false)} className="w-8 h-8 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10">✕</button></div>
-            <div className="p-5 overflow-y-auto max-h-[calc(90vh-80px)]"><div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-8">
+            <div className="p-5 overflow-y-auto max-h-[calc(90vh-80px)]">
+              <section className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4"><div className="flex items-center justify-between gap-4"><div><h4 className="text-sm font-bold text-white">音效引擎</h4><p className="text-xs text-zinc-400 mt-1">开启后可用均衡器/混响/真实频谱，但手机切后台会停止播放；关闭则后台可继续播放。切换后自动刷新页面生效。</p></div><input type="checkbox" checked={audioFxEngineEnabled} onChange={(e) => { const next = e.target.checked; try { window.localStorage.setItem('moontv_music_fx_engine', next ? '1' : '0'); } catch { /* ignore */ } setAudioFxEngineEnabled(next); window.location.reload(); }} className="h-5 w-5 shrink-0 accent-amber-500" /></div></section>
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-8">
               <section><div className="flex items-center justify-between mb-4"><div><h4 className="text-sm font-bold text-white">10 段均衡器</h4></div><label className="flex items-center gap-2 text-xs text-zinc-300"><input type="checkbox" checked={equalizerEnabled} onChange={(e) => setEqualizerEnabled(e.target.checked)} className="h-4 w-4 accent-green-500" />启用 EQ</label></div>
                 <div className="rounded-xl border border-white/5 p-4 overflow-x-auto overscroll-x-contain"><div className="min-w-[760px] grid grid-cols-10 gap-3 items-end h-56 sm:h-64">{EQ_BANDS.map((band, index) => (<div key={band.frequency} className="h-full min-w-0 flex flex-col items-center gap-2"><span className="text-[10px] font-mono text-zinc-500">{(eqGains[index] || 0) > 0 ? '+' : ''}{(eqGains[index] || 0).toFixed(1)}</span><div className="flex-1 w-full min-h-0 flex items-center justify-center"><input type="range" min="-12" max="12" step="0.5" value={eqGains[index] || 0} onChange={(e) => { setEqPreset('自定义'); const value = Number(e.target.value); setEqGains(current => current.map((gain, i) => i === index ? value : gain)); }} disabled={!equalizerEnabled} className="w-40 sm:w-52 h-5 -rotate-90 accent-green-500 [direction:rtl] disabled:opacity-40" /></div><span className="text-[10px] font-mono text-zinc-400">{band.label}</span></div>))}</div></div>
                 <div className="mt-5"><div className="flex items-center justify-between mb-3"><h4 className="text-sm font-bold text-white">预设</h4><button onClick={() => applyEqPreset('Flat')} className="text-xs text-green-400 hover:text-green-300">Flat 重置</button></div><div className="flex flex-wrap gap-2">{Object.keys(EQ_PRESETS).map(name => (<button key={name} onClick={() => applyEqPreset(name)} className={`px-3 py-1.5 rounded-lg text-xs transition-colors ${eqPreset === name ? 'bg-green-500/20 text-green-300 border border-green-500/50' : 'bg-white/5 text-zinc-300 border border-white/10 hover:bg-white/10'}`}>{name}</button>))}</div></div>
